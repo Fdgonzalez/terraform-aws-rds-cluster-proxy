@@ -1,0 +1,70 @@
+Parameters:
+  SecretArn:
+    Type: "String"
+  ProxyName:
+    Type: "String"
+  EngineFamily:
+    Type: "String"
+  RoleArn:
+    Type: "String"
+  VpcSecurityGroupIds:
+    Type: "List<AWS::EC2::SecurityGroup::Id>"
+  VpcSubnetIds:
+    Type: "List<AWS::EC2::Subnet::Id>"
+  exportArn:
+    Type: "String"
+  exportEndpoint:
+    Type: "String"
+  ClusterId:
+    Type: "String"
+  MaxConnectionsPercent:
+    Type: "Number"
+  MaxIdleConnectionsPercent:
+    Type: "Number"
+  ConnectionBorrowTimeout:
+    Type: "Number"
+
+Resources:
+  DBProxy:
+    Type: AWS::RDS::DBProxy
+    Properties:
+      Auth:
+        - AuthScheme: "SECRETS"
+          Description: "DB SECRET"
+          IAMAuth: "DISABLED"
+          SecretArn: !Ref SecretArn
+      DBProxyName: !Ref ProxyName
+      DebugLogging: true
+      EngineFamily: !Ref EngineFamily
+      IdleClientTimeout: 12
+      RequireTLS: false
+      RoleArn: !Ref RoleArn
+      VpcSecurityGroupIds: !Ref VpcSecurityGroupIds
+      VpcSubnetIds: !Ref VpcSubnetIds
+    DeletionPolicy: "Retain"
+  ProxyTargetGroup:
+    Type: AWS::RDS::DBProxyTargetGroup
+    Properties:
+      DBProxyName: !Ref DBProxy
+      DBClusterIdentifiers: [!Ref ClusterId]
+      TargetGroupName: default
+      ConnectionPoolConfigurationInfo:
+        MaxConnectionsPercent: !Ref MaxConnectionsPercent
+        MaxIdleConnectionsPercent: !Ref MaxIdleConnectionsPercent
+        ConnectionBorrowTimeout: !Ref ConnectionBorrowTimeout
+
+Outputs:
+  ProxyARN:
+    Description: "RDS proxy ARN"
+    Value:
+      Fn::GetAtt: [ DBProxy, DBProxyArn ]
+    Export:
+      Name: !Ref exportArn
+
+  ProxyEndpoint:
+    Description: "RDS proxy Endpoint"
+    Value:
+      Fn::GetAtt: [ DBProxy, Endpoint ]
+    Export:
+      Name: !Ref exportEndpoint
+
